@@ -131,7 +131,7 @@ async fn get() -> Result<Vec<BattlebitServer>> {
             }
             match serde_json::from_str::<Vec<BattlebitServer>>(&json_string) {
                 Ok(json_res) => {
-                    return Ok(json_res);
+                    Ok(json_res)
                 }
                 Err(e) => {
                     anyhow::bail!("BattleBit public json is incorrect: {:#?}", e)
