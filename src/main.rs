@@ -149,8 +149,12 @@ async fn status(ctx: Context, statics: Static) -> Result<()> {
         Ok(status) => {
             for server in status {
                 if server.name == statics.server_name {
-                    let server_info =
-                        format!("{}/{} - {}", server.players, server.max_players, server.map);
+                    let server_info = format!(
+                        "{}/{} - {}",
+                        server.players,
+                        server.max_players,
+                        server.map.replace("Old_", "")
+                    );
                     // change game activity
                     ctx.set_activity(Activity::playing(server_info)).await;
 
@@ -181,7 +185,7 @@ pub async fn gen_img(server: BattlebitServer) -> Result<String> {
     let img = client
         .get(format!(
             "https://cdn.gametools.network/maps/battlebit/{}.jpg",
-            server.map
+            server.map.replace("Old_", "")
         ))
         .send()
         .await?
