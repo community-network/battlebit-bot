@@ -4,7 +4,7 @@ COPY . .
 ARG github_token 
 RUN git config --global credential.helper store && echo "https://zefanjajobse:${github_token}@github.com" > ~/.git-credentials && cargo install --path .
 
-FROM debian:bullseye
+FROM debian:bullseye-slim
 
 ENV token default_token_value
 ENV server_name default_server_name_value
