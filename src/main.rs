@@ -1,8 +1,8 @@
+use ab_glyph::{FontRef, PxScale};
 use anyhow::Result;
 use chrono::Utc;
 use image::{io::Reader as ImageReader, Rgba};
 use imageproc::drawing::draw_text_mut;
-use rusttype::{Font, Scale};
 use serde::{Deserialize, Serialize};
 use serenity::{
     builder::{CreateAttachment, EditProfile},
@@ -11,7 +11,7 @@ use serenity::{
     model::gateway::Ready,
     prelude::GatewayIntents,
 };
-use std::{collections::HashMap, io::Cursor};
+use std::{collections::HashMap, env, io::Cursor};
 use std::{
     sync::{atomic, Arc},
     time,
@@ -77,8 +77,7 @@ impl EventHandler for Handler {
         let last_update = Arc::new(atomic::AtomicI64::new(0));
         let last_update_clone = Arc::clone(&last_update);
 
-        let cfg: Static = confy::load_path("config.txt").unwrap();
-
+        let cfg: Static = confy::load_path("config.txt").unwrap_or_default();
         log::info!("Started monitoring server {}", cfg.server_name);
 
         tokio::spawn(async move {
@@ -199,14 +198,13 @@ pub async fn gen_img(server: BattlebitServer) -> Result<String> {
 
     img2.save("./info_image.jpg")?;
 
-    let scale = Scale {
+    let scale = PxScale {
         x: (img2.width() / 3) as f32,
         y: (img2.height() as f32 / 1.7),
     };
-    let font_name = Vec::from(include_bytes!("Futura.ttf") as &[u8]);
-    let font: Font = Font::try_from_vec(font_name).unwrap();
+    let font = FontRef::try_from_slice(include_bytes!("Futura.ttf") as &[u8]).unwrap();
 
-    let img_size = Scale {
+    let img_size = PxScale {
         x: img2.width() as f32,
         y: img2.height() as f32,
     };
@@ -250,7 +248,7 @@ async fn main() -> anyhow::Result<()> {
         .unwrap_or_else(|e| panic!("Logger initialization failed with {}", e))
         .start()?;
 
-    let cfg: Static = match confy::load_path("config.txt") {
+    let mut cfg: Static = match confy::load_path("config.txt") {
         Ok(config) => config,
         Err(e) => {
             log::error!("error in config.txt: {}", e);
@@ -260,6 +258,14 @@ async fn main() -> anyhow::Result<()> {
                 server_name: "".into(),
             }
         }
+    };
+    cfg.token = match env::var("token") {
+        Ok(res) => res,
+        Err(_) => cfg.token,
+    };
+    cfg.server_name = match env::var("server_name") {
+        Ok(res) => res,
+        Err(_) => cfg.server_name,
     };
     confy::store_path("config.txt", cfg.clone()).unwrap();
 

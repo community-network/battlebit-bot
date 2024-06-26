@@ -1,4 +1,4 @@
-FROM rust:1.75 as builder
+FROM rust:1.79 as builder
 WORKDIR /usr/src/myapp
 COPY . .
 ARG github_token 
@@ -15,4 +15,4 @@ HEALTHCHECK --interval=5m --timeout=3s --start-period=5s \
 
 COPY --from=builder /usr/local/cargo/bin/discord_bot /usr/local/bin/discord_bot
 RUN apt-get update && apt-get install --assume-yes curl && apt-get clean
-CMD echo "token = '$token'\nserver_name = '$server_name'" > config.txt && discord_bot
+CMD ["discord_bot"]
