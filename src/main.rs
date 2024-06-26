@@ -253,10 +253,7 @@ async fn main() -> anyhow::Result<()> {
         Err(e) => {
             log::error!("error in config.txt: {}", e);
             log::warn!("changing back to default..");
-            Static {
-                token: "".into(),
-                server_name: "".into(),
-            }
+            Static::default()
         }
     };
     cfg.token = match env::var("token") {
