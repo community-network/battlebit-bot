@@ -7,7 +7,8 @@ You can use the bot with multiple methods, a config file, environment variable o
 
 ```yaml
 token: discord bot token
-name: servername to track
+server_name: servername to track
+set_banner_image: (optional) if it has to set the banner image of the bot (defaults to true)
 ```
 
 ## Using the bot

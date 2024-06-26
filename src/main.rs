@@ -24,6 +24,7 @@ struct Handler;
 pub struct Static {
     pub token: String,
     pub server_name: String,
+    pub set_banner_image: bool,
 }
 
 /// `MyConfig` implements `Default`
@@ -32,6 +33,7 @@ impl ::std::default::Default for Static {
         Self {
             token: "".into(),
             server_name: "".into(),
+            set_banner_image: true,
         }
     }
 }
@@ -163,7 +165,14 @@ async fn status(ctx: Context, statics: Static) -> Result<()> {
                         .await
                         .expect("Failed to read image");
                     let mut user = ctx.cache.current_user().clone();
-                    let _ = user.edit(ctx, EditProfile::new().avatar(&avatar)).await;
+                    let mut new_profile = EditProfile::new().avatar(&avatar);
+                    if statics.set_banner_image {
+                        let banner = CreateAttachment::path("./info_image.jpg")
+                            .await
+                            .expect("Failed to read banner image");
+                        new_profile = new_profile.banner(&banner);
+                    }
+                    let _ = user.edit(ctx, new_profile.clone()).await;
 
                     return Ok(());
                 }
@@ -193,10 +202,10 @@ pub async fn gen_img(server: BattlebitServer) -> Result<String> {
 
     let mut img2 = ImageReader::new(Cursor::new(img))
         .with_guessed_format()?
-        .decode()?
-        .brighten(-25);
+        .decode()?;
 
     img2.save("./info_image.jpg")?;
+    img2.brighten(-25);
 
     let scale = PxScale {
         x: (img2.width() / 3) as f32,
@@ -263,6 +272,16 @@ async fn main() -> anyhow::Result<()> {
     cfg.server_name = match env::var("server_name") {
         Ok(res) => res,
         Err(_) => cfg.server_name,
+    };
+    cfg.set_banner_image = match env::var("set_banner_image") {
+        Ok(res) => match res.as_str() {
+            "true" => true,
+            "t" => true,
+            "false" => false,
+            "f" => false,
+            _ => true,
+        },
+        Err(_) => cfg.set_banner_image,
     };
     confy::store_path("config.txt", cfg.clone()).unwrap();
 
