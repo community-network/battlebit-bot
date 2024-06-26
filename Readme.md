@@ -19,18 +19,18 @@ You can run it with Docker (Docker Compose):
 version: '3.7'
 
 services:
-    ace-bot-1:
-      image: ghcr.io/community-network/battlebit-bot/battlebit-bot:latest
-      restart: always
-      environment:
-        - token=TOKEN
-        - server_name=[ACE]#1
-      healthcheck:
-        test: ["CMD", "curl", "-f", "http://127.0.0.1:3030/"]
-        interval: "60s"
-        timeout: "3s"
-        start_period: "5s"
-        retries: 3
+  ace-bot-1:
+    image: ghcr.io/community-network/battlebit-bot/battlebit-bot:latest
+    restart: always
+    environment:
+      - token=TOKEN
+      - server_name=[ACE]#1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3030/"]
+      interval: "60s"
+      timeout: "3s"
+      start_period: "5s"
+      retries: 3
 ```
 
 Or use the executable available [here](https://github.com/community-network/battlebit-bot/releases/latest)
