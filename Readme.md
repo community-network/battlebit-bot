@@ -1,6 +1,6 @@
 # Battlebit Discord status bot
 
-This Discord bot checks the status of your server custom servers, as requested by [onemanarmy](https://www.superinfantryclan.com/)
+This Discord bot checks the status of your server custom servers, as requested by [onemanarmy](https://www.superinfantryclan.com/).
 You can use the bot with multiple methods, a config file, environment variable or within Docker.
 
 ### Environment items:
