@@ -23,7 +23,7 @@ services:
       restart: always
       environment:
         - token=TOKEN
-        - name=[ACE]#1
+        - server_name=[ACE]#1
       healthcheck:
         test: ["CMD", "curl", "-f", "http://127.0.0.1:3030/"]
         interval: "60s"
@@ -39,7 +39,7 @@ And use that on windows via a bat file:
 ```bat
 @ECHO OFF
 SET token=DISCORDTOKEN
-SET name=SUPER@ [SiC] S1
+SET server_name=SUPER@ [SiC] S1
 FILENAME.exe
 ```
 
@@ -47,7 +47,7 @@ Or on Linux/Mac with these commands:
 
 ```bash
 export token=TOKEN
-export name=SERVERNAME
+export server_name=SERVERNAME
 ./FILENAME
 ```
 
@@ -64,6 +64,6 @@ If you want to run it with your own changes in the code, install [rust](https://
 
 ```bash
 export token=TOKEN
-export name=SERVERNAME
+export server_name=SERVERNAME
 cargo run
 ```
