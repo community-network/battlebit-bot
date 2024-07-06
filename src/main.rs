@@ -11,7 +11,7 @@ use serenity::{
     model::gateway::Ready,
     prelude::GatewayIntents,
 };
-use std::{collections::HashMap, env, io::Cursor};
+use std::{collections::HashMap, env, io::Cursor, ops::Add};
 use std::{
     sync::{atomic, Arc},
     time,
@@ -25,6 +25,7 @@ pub struct Static {
     pub token: String,
     pub server_name: String,
     pub set_banner_image: bool,
+    pub mins_between_avatar_change: i32,
 }
 
 /// `MyConfig` implements `Default`
@@ -34,6 +35,7 @@ impl ::std::default::Default for Static {
             token: "".into(),
             server_name: "".into(),
             set_banner_image: true,
+            mins_between_avatar_change: 1,
         }
     }
 }
@@ -103,9 +105,14 @@ impl EventHandler for Handler {
 
         // loop in seperate async
         tokio::spawn(async move {
+            // set update_avatar to 1 minute ago to allow changing on startup
+            let mut update_avatar = chrono::Utc::now()
+                - chrono::Duration::minutes(cfg.mins_between_avatar_change.into());
             loop {
-                match status(ctx.clone(), cfg.clone()).await {
-                    Ok(item) => item,
+                match status(ctx.clone(), cfg.clone(), update_avatar).await {
+                    Ok(time) => {
+                        update_avatar = time;
+                    }
                     Err(e) => {
                         log::error!("cant get new stats: {}", e);
                     }
@@ -144,40 +151,13 @@ async fn get() -> Result<Vec<BattlebitServer>> {
     }
 }
 
-async fn status(ctx: Context, statics: Static) -> Result<()> {
-    match get().await {
-        Ok(status) => {
-            for server in status {
-                if server.name == statics.server_name {
-                    let server_info = format!(
-                        "{}/{} - {}",
-                        server.players,
-                        server.max_players,
-                        server.map.replace("Old_", "")
-                    );
-                    // change game activity
-                    ctx.set_activity(Some(ActivityData::playing(server_info)));
-
-                    let image_loc = gen_img(server).await?;
-
-                    // change avatar
-                    let avatar = CreateAttachment::path(image_loc)
-                        .await
-                        .expect("Failed to read image");
-                    let mut user = ctx.cache.current_user().clone();
-                    let mut new_profile = EditProfile::new().avatar(&avatar);
-                    if statics.set_banner_image {
-                        let banner = CreateAttachment::path("./info_image.jpg")
-                            .await
-                            .expect("Failed to read banner image");
-                        new_profile = new_profile.banner(&banner);
-                    }
-                    let _ = user.edit(ctx, new_profile.clone()).await;
-
-                    return Ok(());
-                }
-            }
-        }
+async fn status(
+    ctx: Context,
+    statics: Static,
+    mut update_avatar: chrono::DateTime<Utc>,
+) -> Result<chrono::DateTime<Utc>> {
+    let status = match get().await {
+        Ok(status) => status,
         Err(e) => {
             let server_info = "¯\\_(ツ)_/¯ server not found";
             ctx.set_activity(Some(ActivityData::playing(server_info)));
@@ -185,7 +165,58 @@ async fn status(ctx: Context, statics: Static) -> Result<()> {
             anyhow::bail!(format!("Failed to get new serverinfo: {}", e))
         }
     };
-    anyhow::bail!(format!("Couldn't find server in serverlist!"))
+
+    let mut current_server = None;
+    for server in status {
+        if server.name == statics.server_name {
+            current_server = Some(server);
+        }
+    }
+    if current_server.is_none() {
+        anyhow::bail!(format!("Couldn't find server in serverlist!"))
+    }
+    let server = current_server.unwrap();
+
+    let server_info = format!(
+        "{}/{} - {}",
+        server.players,
+        server.max_players,
+        server.map.replace("Old_", "")
+    );
+    // change game activity
+    ctx.set_activity(Some(ActivityData::playing(server_info)));
+
+    let image_loc = gen_img(server).await?;
+
+    if update_avatar.add(chrono::Duration::minutes(
+        statics.mins_between_avatar_change.into(),
+    )) <= chrono::Utc::now()
+    {
+        // change avatar
+        let avatar = CreateAttachment::path(image_loc)
+            .await
+            .expect("Failed to read image");
+        let mut user = ctx.cache.current_user().clone();
+        let mut new_profile = EditProfile::new().avatar(&avatar);
+        if statics.set_banner_image {
+            let banner = CreateAttachment::path("./info_image.jpg")
+                .await
+                .expect("Failed to read banner image");
+            new_profile = new_profile.banner(&banner);
+        }
+        if let Err(e) = user.edit(ctx.clone(), new_profile).await {
+            log::error!(
+                "Failed to set new avatar: {:?}\n adding timeout before retrying",
+                e
+            );
+            // add official avatar timeout if discord avatar timeout is reached
+            update_avatar = chrono::Utc::now().add(chrono::Duration::minutes(5));
+        } else {
+            update_avatar = chrono::Utc::now();
+        };
+    }
+
+    Ok(update_avatar)
 }
 
 pub async fn gen_img(server: BattlebitServer) -> Result<String> {
